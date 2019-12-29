@@ -1,78 +1,75 @@
-<p align="center"><img src="https://res.cloudinary.com/dtfbvvkyp/image/upload/v1566331377/laravel-logolockup-cmyk-red.svg" width="400"></p>
+# Laravel Queue
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+# Question
 
-## About Laravel
+Considering you have an application and you have the two types of user; the Client and
+the Vendor and Client wants to Request something from the Vendor which is catered
+by the app. There is a “waiting time of 5 seconds” before the Vendor receives the
+Request (a confirmed Request).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+# Answer
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+For this requirements, the perfect is using the Message Queue Architecture 
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+# Architecture
 
-## Learning Laravel
+The architecture for the Message Qeue are:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+* Producer: This is a service which is fire the **message** in action. In this question, when Clients sending the request, a event `NewOrderHasRegisteredEvent` will be fire.   
+* Message: This is the Message when Clients send the request to the Vendor. This message will going to the Message Queue place and waiting to request. This is an asynchronus behaviour.
+* Message Queue: This is the place to hold all the Message in the Service. There is some differents ways to hold the Messages using differents drivers such as Database, Redis, Beanstalkd or SQS. In this question, I will use Database drivers to hold the Message Queue. 
+* Consumer: This is a service which is take the message from the Message Queue to handle. In Laravel, the cousmer is Listener Event.
+* Worker: An background service, running to listen the event.
+* Supervisor: This is an service running on environmenet to tracking the Service, it will make sure that the message is always handle by the cosumer. If something wrong during the process, the supervisor will take care of it and ask the cosumer run it again.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Database
 
-## Laravel Sponsors
+By default, Laravel 6 have a Queue built in. 
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+![](https://www.awesomescreenshot.com/upload//1081119/15c968ee-8955-4ac5-60b0-cbcba95bf38c.png)
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- [UserInsights](https://userinsights.com)
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-- [Invoice Ninja](https://www.invoiceninja.com)
-- [iMi digital](https://www.imi-digital.de/)
-- [Earthlink](https://www.earthlink.ro/)
-- [Steadfast Collective](https://steadfastcollective.com/)
-- [We Are The Robots Inc.](https://watr.mx/)
-- [Understand.io](https://www.understand.io/)
-- [Abdel Elrafa](https://abdelelrafa.com)
-- [Hyper Host](https://hyper.host)
-- [Appoly](https://www.appoly.co.uk)
-- [OP.GG](https://op.gg)
+In this database, we have three entities and two table for queue
 
-## Contributing
+## Three entities  
+* Client Entity
+* Order Entity
+* Vendor Entity
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+All three entities using the business Logic. Client will send an order request to a specific vendor.
 
-## Code of Conduct
+## Queue
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+In Laravel queue, it have 2 table.
+* Jobs: This is Message Queue that  I mentioned above. It will hold all the message fired from producer (An event)
+* Failed Jobs: After a consumer (Event Listener) cannot handle the request, it will save into this table.
 
-## Security Vulnerabilities
+# Workflow for this Question
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+* Client enter one Order Request and press Submit. It will redirect to clients page.
+* Meanwhile, after client press Submit, a producer (an event) `NewOrderHasRegisteredEvent` will be called
+* The event message will be save into the Jobs Table.
+* A producer (an event listener) `SendOrderToVendorListener` will handle this event.
+* After 10 seconds, the producer handle the event and save data into Order Table
+* When the procuder finish the job, the message will be removed in database becasue Queue work in FIFO.
 
-## License
+# Deployment
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+To deploy this scenario, we will need an VPS running the Linux envionment. The step to Deploy will be:
+
+* Install Docker Envionmenet in VPS
+* Install Laradock in VPS
+* Running Laravel Application
+* Create an worker daemon by running `php artisan queue:work &`
+* Install supervisor in Linux: `sudo apt-get install supervisor`
+
+In production envionmenet, we can use **Redis Driver** instead of **Database Driver**. The Database Driver is not really suitable for large request. 
+
+# How to run application
+
+* Install Composer Dependencies by command `composer install`
+* Copy .env.example to .env by command `cp .env.example .env`
+* Edit .env file
+    * Edit database name, usernrame and password
+    * Change QUEUE_CONNECTION from **sync** to **database**
+* Generate Key by command `php artisan key:generate`
+* Run application by command `php artisan serve`
