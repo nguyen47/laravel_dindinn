@@ -72,4 +72,6 @@ In production envionmenet, we can use **Redis Driver** instead of **Database Dri
     * Edit database name, usernrame and password
     * Change QUEUE_CONNECTION from **sync** to **database**
 * Generate Key by command `php artisan key:generate`
+* Run migration by command `php artisan migrate`
+* Run dbseed by command `php artisan db:seed`
 * Run application by command `php artisan serve`
